@@ -1,0 +1,1843 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heimwärts</title>
+<meta name="description" content="Fahrtkosten fürs Nachhausebringen berechnen und abgeschlossene Fahrten festhalten.">
+<meta name="theme-color" content="#0A3F78">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Heimwärts">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<style>
+/* Layout: eine Spalte auf kuehlem Grau; Rechner und Hauptmenue (Fahrtenliste) sind zwei Ansichten, Haus-Symbol oben links wechselt zum Menue; unten feste Leiste mit Preis, Anwenden und Gefahren */
+:root {
+  --bg: #EDF0F3;
+  --surface: #FFFFFF;
+  --ink: #131C26;
+  --muted: #52606E;
+  --line: #C5CED7;
+  --accent: #0B57A4;
+  --on-accent: #FFFFFF;
+  --panel: #0A3F78;
+  --on-panel: #FFFFFF;
+  --on-panel-muted: #B9D2EE;
+  --panel-line: rgba(255, 255, 255, 0.2);
+  --bad: #B3261E;
+  --toast-err: #8E1B14;
+  --cash: #1E7B49;
+  --cash-bg: #D5ECDC;
+  --cash-ink: #14572F;
+  --xfer-bg: #D6E4F6;
+  --xfer-ink: #0B4F96;
+  --font-display: "Barlow Condensed", "Roboto Condensed", sans-serif-condensed, "Arial Narrow", "Helvetica Neue", system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D131A;
+    --surface: #151E28;
+    --ink: #E8EDF2;
+    --muted: #9DAAB8;
+    --line: #2A3642;
+    --accent: #5BA3F0;
+    --on-accent: #04182B;
+    --panel: #123A63;
+    --on-panel: #FFFFFF;
+    --on-panel-muted: #A9C6E6;
+    --panel-line: rgba(255, 255, 255, 0.2);
+    --bad: #FF8F86;
+    --toast-err: #7C2823;
+    --cash: #3FB36F;
+    --cash-bg: #173A27;
+    --cash-ink: #86DDA8;
+    --xfer-bg: #16314F;
+    --xfer-ink: #9CC8F5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D131A;
+  --surface: #151E28;
+  --ink: #E8EDF2;
+  --muted: #9DAAB8;
+  --line: #2A3642;
+  --accent: #5BA3F0;
+  --on-accent: #04182B;
+  --panel: #123A63;
+  --on-panel: #FFFFFF;
+  --on-panel-muted: #A9C6E6;
+  --panel-line: rgba(255, 255, 255, 0.2);
+  --bad: #FF8F86;
+  --toast-err: #7C2823;
+  --cash: #3FB36F;
+  --cash-bg: #173A27;
+  --cash-ink: #86DDA8;
+  --xfer-bg: #16314F;
+  --xfer-ink: #9CC8F5;
+  color-scheme: dark;
+}
+
+/* Farbpaletten: jede Palette färbt die ganze App in Tönen einer Farbe */
+:root {
+  --pal-gruen-bg: #DFF6E9; --pal-gruen-surface: #FAFDFB; --pal-gruen-ink: #0E2518; --pal-gruen-muted: #476654; --pal-gruen-line: #B2D1BF; --pal-gruen-accent: #11783C; --pal-gruen-onaccent: #FFFFFF; --pal-gruen-panel: #105B2F; --pal-gruen-onpanelmuted: #BEEFD2; --pal-gruen-chip: #C6ECD6; --pal-gruen-chipink: #0D592D;
+  --pal-blau-bg: #DFEAF6; --pal-blau-surface: #FAFBFD; --pal-blau-ink: #0E1925; --pal-blau-muted: #475666; --pal-blau-line: #B2C1D1; --pal-blau-accent: #144B8A; --pal-blau-onaccent: #FFFFFF; --pal-blau-panel: #10335B; --pal-blau-onpanelmuted: #BED5EF; --pal-blau-chip: #C6D7EC; --pal-blau-chipink: #0D3059;
+  --pal-violett-bg: #E9DFF6; --pal-violett-surface: #FBFAFD; --pal-violett-ink: #180E25; --pal-violett-muted: #544766; --pal-violett-line: #BFB2D1; --pal-violett-accent: #45148A; --pal-violett-onaccent: #FFFFFF; --pal-violett-panel: #2F105B; --pal-violett-onpanelmuted: #D2BEEF; --pal-violett-chip: #D6C6EC; --pal-violett-chipink: #2D0D59;
+  --pal-orange-bg: #F6E9DF; --pal-orange-surface: #FDFBFA; --pal-orange-ink: #25180E; --pal-orange-muted: #665547; --pal-orange-line: #D1C0B2; --pal-orange-accent: #8A4914; --pal-orange-onaccent: #FFFFFF; --pal-orange-panel: #5B3210; --pal-orange-onpanelmuted: #EFD4BE; --pal-orange-chip: #ECD7C6; --pal-orange-chipink: #592F0D;
+  --pal-grau-bg: #E7EAEE; --pal-grau-surface: #FBFBFC; --pal-grau-ink: #16191D; --pal-grau-muted: #52565B; --pal-grau-line: #BEC2C6; --pal-grau-accent: #374D67; --pal-grau-onaccent: #FFFFFF; --pal-grau-panel: #2B3540; --pal-grau-onpanelmuted: #CFD6DD; --pal-grau-chip: #D3D8DE; --pal-grau-chipink: #28323E;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pal-gruen-bg: #0B1E13; --pal-gruen-surface: #162A1E; --pal-gruen-ink: #E8F3EC; --pal-gruen-muted: #A3C2B0; --pal-gruen-line: #2C4938; --pal-gruen-accent: #6CEFA3; --pal-gruen-onaccent: #092515; --pal-gruen-panel: #135830; --pal-gruen-onpanelmuted: #B0E8C7; --pal-gruen-chip: #1D442D; --pal-gruen-chipink: #ACF6CB;
+    --pal-blau-bg: #0B141E; --pal-blau-surface: #161F2A; --pal-blau-ink: #E8EDF3; --pal-blau-muted: #A3B1C2; --pal-blau-line: #2C3A49; --pal-blau-accent: #6CA9EF; --pal-blau-onaccent: #091625; --pal-blau-panel: #133358; --pal-blau-onpanelmuted: #B0CAE8; --pal-blau-chip: #1D2F44; --pal-blau-chipink: #ACCFF6;
+    --pal-violett-bg: #130B1E; --pal-violett-surface: #1E162A; --pal-violett-ink: #ECE8F3; --pal-violett-muted: #B0A3C2; --pal-violett-line: #382C49; --pal-violett-accent: #A36CEF; --pal-violett-onaccent: #150925; --pal-violett-panel: #301358; --pal-violett-onpanelmuted: #C7B0E8; --pal-violett-chip: #2D1D44; --pal-violett-chipink: #CBACF6;
+    --pal-orange-bg: #1E130B; --pal-orange-surface: #2A1F16; --pal-orange-ink: #F3EDE8; --pal-orange-muted: #C2B1A3; --pal-orange-line: #49392C; --pal-orange-accent: #EFA76C; --pal-orange-onaccent: #251609; --pal-orange-panel: #583213; --pal-orange-onpanelmuted: #E8C9B0; --pal-orange-chip: #442F1D; --pal-orange-chipink: #F6CDAC;
+    --pal-grau-bg: #121417; --pal-grau-surface: #1D2023; --pal-grau-ink: #ECEDEF; --pal-grau-muted: #AEB2B7; --pal-grau-line: #373A3F; --pal-grau-accent: #95ACC6; --pal-grau-onaccent: #13171B; --pal-grau-panel: #2C353F; --pal-grau-onpanelmuted: #C4CBD4; --pal-grau-chip: #2B3036; --pal-grau-chipink: #C7D0DB;
+  }
+}
+:root[data-theme="dark"] {
+  --pal-gruen-bg: #0B1E13; --pal-gruen-surface: #162A1E; --pal-gruen-ink: #E8F3EC; --pal-gruen-muted: #A3C2B0; --pal-gruen-line: #2C4938; --pal-gruen-accent: #6CEFA3; --pal-gruen-onaccent: #092515; --pal-gruen-panel: #135830; --pal-gruen-onpanelmuted: #B0E8C7; --pal-gruen-chip: #1D442D; --pal-gruen-chipink: #ACF6CB;
+  --pal-blau-bg: #0B141E; --pal-blau-surface: #161F2A; --pal-blau-ink: #E8EDF3; --pal-blau-muted: #A3B1C2; --pal-blau-line: #2C3A49; --pal-blau-accent: #6CA9EF; --pal-blau-onaccent: #091625; --pal-blau-panel: #133358; --pal-blau-onpanelmuted: #B0CAE8; --pal-blau-chip: #1D2F44; --pal-blau-chipink: #ACCFF6;
+  --pal-violett-bg: #130B1E; --pal-violett-surface: #1E162A; --pal-violett-ink: #ECE8F3; --pal-violett-muted: #B0A3C2; --pal-violett-line: #382C49; --pal-violett-accent: #A36CEF; --pal-violett-onaccent: #150925; --pal-violett-panel: #301358; --pal-violett-onpanelmuted: #C7B0E8; --pal-violett-chip: #2D1D44; --pal-violett-chipink: #CBACF6;
+  --pal-orange-bg: #1E130B; --pal-orange-surface: #2A1F16; --pal-orange-ink: #F3EDE8; --pal-orange-muted: #C2B1A3; --pal-orange-line: #49392C; --pal-orange-accent: #EFA76C; --pal-orange-onaccent: #251609; --pal-orange-panel: #583213; --pal-orange-onpanelmuted: #E8C9B0; --pal-orange-chip: #442F1D; --pal-orange-chipink: #F6CDAC;
+  --pal-grau-bg: #121417; --pal-grau-surface: #1D2023; --pal-grau-ink: #ECEDEF; --pal-grau-muted: #AEB2B7; --pal-grau-line: #373A3F; --pal-grau-accent: #95ACC6; --pal-grau-onaccent: #13171B; --pal-grau-panel: #2C353F; --pal-grau-onpanelmuted: #C4CBD4; --pal-grau-chip: #2B3036; --pal-grau-chipink: #C7D0DB;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding-inline: 16px;
+  padding-block: 20px calc(160px + env(safe-area-inset-bottom, 0px));
+  transition: background-color 0.3s ease;
+}
+body[data-view="menu"] { padding-block-end: calc(32px + env(safe-area-inset-bottom, 0px)); }
+.app {
+  max-width: 30rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.stack { display: flex; flex-direction: column; gap: 22px; }
+
+.top { display: flex; flex-direction: column; gap: 10px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.home {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.home svg { display: block; }
+.who {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 60%;
+  min-height: 44px;
+  padding: 4px 12px 4px 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.who:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.who-dot {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+}
+.who-name { min-width: 0; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 18, 30, 0.55);
+}
+.modal-card {
+  width: 100%;
+  max-width: 24rem;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+.modal-card h2 { margin: 0 0 6px; font-family: var(--font-display); font-size: 1.75rem; line-height: 1.1; }
+.modal-text { margin: 0 0 16px; color: var(--muted); font-size: 0.95rem; }
+.modal-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 52px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.125rem;
+}
+.modal-input:focus { outline: 3px solid var(--accent); outline-offset: 1px; }
+.modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.modal-actions .btn { flex: 1; }
+.prof { padding-top: 0; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
+.prof-head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 14px; margin: 0 -20px 8px; padding: 20px 20px 10px; background: var(--surface); }
+.prof-home { margin-left: auto; }
+.prof-id { min-width: 0; }
+.prof-id h2 { margin: 0; overflow-wrap: anywhere; }
+.who-dot.big { width: 56px; height: 56px; font-size: 1.5rem; }
+.linkbtn { padding: 6px 0; border: 0; background: none; color: var(--accent); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer; text-decoration: underline; }
+.linkbtn:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.prof-h { margin: 18px 0 8px; color: var(--muted); font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.prof-count { font-weight: 500; letter-spacing: 0; text-transform: none; }
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat { padding: 12px; border-radius: 8px; background: var(--bg); }
+.stat b { display: block; font-family: var(--font-display); font-size: 1.75rem; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 0.8125rem; }
+.ach { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.ach li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: var(--bg); }
+.ach .medal { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--line); color: var(--muted); font-weight: 700; }
+.ach li.done .medal { background: var(--accent); color: var(--on-accent); }
+.ach .a-body { min-width: 0; flex: 1; }
+.ach .a-title { display: block; font-weight: 600; }
+.ach li:not(.done) .a-title { color: var(--muted); }
+.ach .a-sub { display: block; color: var(--muted); font-size: 0.8125rem; }
+.ach progress { display: block; width: 100%; height: 6px; margin-top: 6px; border: 0; border-radius: 3px; overflow: hidden; background: var(--line); accent-color: var(--accent); }
+.prof .btn-wide { margin-top: 18px; }
+.home[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.home:active { transform: translateY(1px); }
+.home:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.top h1 {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.875rem;
+  line-height: 1.05;
+  letter-spacing: 0.005em;
+  text-wrap: balance;
+}
+.top h1:focus { outline: none; }
+.top p {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.paysw {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 56px;
+  padding: 4px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: grab;
+}
+.paysw.dragging { cursor: grabbing; }
+.paysw-in { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.paysw-thumb {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: var(--bar-strong, var(--cash));
+  transition: transform 0.22s ease, background-color 0.22s ease;
+}
+.paysw[data-state="ue"] .paysw-thumb { transform: translateX(100%); background: var(--ue-strong, var(--accent)); }
+.paysw.dragging .paysw-thumb { transition: background-color 0.15s ease; }
+.paysw-in:focus-visible ~ .paysw-thumb { outline: 3px solid var(--ink); outline-offset: 2px; }
+.paysw-opt {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 600;
+  transition: color 0.22s ease;
+}
+.paysw[data-state="bar"] .paysw-opt[for="pay-bar"],
+.paysw[data-state="ue"] .paysw-opt[for="pay-ue"] { color: var(--on-accent); }
+
+.form { display: flex; flex-direction: column; gap: 20px; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.field { min-width: 0; }
+fieldset.field { border: 0; margin: 0; padding: 0; }
+
+.field > label,
+.field > legend {
+  display: block;
+  padding: 0;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.control {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+}
+.control:focus-within { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+.control.invalid { border-color: var(--bad); }
+.control input {
+  flex: 1;
+  min-width: 0;
+  height: 54px;
+  padding: 0 0 0 16px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.375rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.t-calc { display: block; margin-top: 2px; color: var(--muted); font-size: 0.75rem; text-align: right; }
+.unit {
+  padding: 0 16px 0 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.hint { margin: 8px 0 0; color: var(--muted); font-size: 0.875rem; }
+.err { margin: 6px 0 0; color: var(--bad); font-size: 0.875rem; }
+
+.chips { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.chip { position: relative; display: block; }
+.chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.chip span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chip input:focus-visible + span { outline: 3px solid var(--ink); outline-offset: 2px; }
+.custom { margin-top: 10px; }
+
+.stepper { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; gap: 8px; }
+.stepper button {
+  height: 56px;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.stepper button:active { background: var(--bg); }
+.stepper button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.stepper .control input { padding: 0; text-align: center; }
+
+.result {
+  background: var(--panel);
+  color: var(--on-panel);
+  border-radius: 6px;
+  padding: 16px 16px 6px;
+  box-shadow: inset 0 0 0 1px var(--panel-line);
+  scroll-margin-bottom: 200px;
+}
+.summary { padding-bottom: 16px; }
+.res-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.res-label {
+  color: var(--on-panel-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.tag {
+  padding: 2px 8px;
+  border: 1px solid var(--panel-line);
+  border-radius: 4px;
+  color: var(--on-panel-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.res-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 0.12em;
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(3rem, 15vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.cur { color: var(--on-panel-muted); font-size: 0.5em; }
+.note { margin: 8px 0 0; color: var(--on-panel-muted); font-size: 0.9rem; }
+.rows { margin: 14px 0 0; padding: 0; }
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--panel-line);
+  font-size: 0.95rem;
+}
+.row dt { color: var(--on-panel-muted); }
+.row.profit { font-size: 1.05rem; }
+.row.profit dt { color: var(--on-panel); font-weight: 600; }
+.row.profit dd { font-size: 1.15rem; }
+.row dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 16px;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.btn-fill { background: var(--accent); color: var(--on-accent); }
+.btn-line { background: transparent; color: var(--accent); }
+.btn-wide { width: 100%; height: 52px; font-size: 1rem; }
+.btn:active { transform: translateY(1px); }
+.btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.btn[disabled] { opacity: 0.6; cursor: default; }
+
+.bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+.bar-inner {
+  max-width: 30rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bar-sums { display: flex; align-items: flex-end; gap: 20px; }
+.more {
+  margin-left: auto;
+  align-self: center;
+  padding: 8px 0 8px 8px;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.more:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.more .chev { display: inline-block; transition: transform 0.2s; }
+.more[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.legal { margin: 0; text-align: center; font-size: 0.875rem; }
+.legal a { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { .more .chev { transition: none; } }
+.bar-sum { display: flex; flex-direction: column; min-width: 0; }
+.bar-label {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.bar-price {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.875rem;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.bar-actions { display: flex; gap: 8px; }
+.bar-actions .btn { flex: 1; }
+
+.menu-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 10px; }
+.menu-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.5rem;
+  line-height: 1.1;
+}
+.store-note { margin: 0 0 10px; color: var(--muted); font-size: 0.875rem; }
+.trips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.trip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 16px 8px;
+}
+.trip + .trip { border-top: 1px solid var(--line); }
+.t-left { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.t-date { color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.t-km { font-size: 1.0625rem; font-variant-numeric: tabular-nums; }
+.t-km strong { font-weight: 600; }
+.t-muted { color: var(--muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.t-right { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; }
+.t-lab {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.t-total {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.875rem;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.t-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.t-ask { margin-right: auto; color: var(--muted); font-size: 0.875rem; }
+.t-link {
+  min-height: 40px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.t-link.danger { color: var(--bad); font-weight: 600; }
+.t-link:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; }
+.pill {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+.pill-bar { background: var(--bar-chip, var(--cash-bg)); color: var(--bar-ink, var(--cash-ink)); }
+.pill-ue { background: var(--ue-chip, var(--xfer-bg)); color: var(--ue-ink, var(--xfer-ink)); }
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1.5px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.toast {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+  max-width: 30rem;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px 12px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--on-panel);
+  font-size: 0.95rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+body[data-view="calc"] .toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+.toast.is-error { background: var(--toast-err); }
+.toast span { min-width: 0; }
+.toast-act {
+  flex: none;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1.5px solid var(--on-panel-muted);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--on-panel);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-act:focus-visible { outline: 3px solid var(--on-panel); outline-offset: 2px; }
+
+/* Sanfte Übergänge: kurz und dezent */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes riseIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.stack.enter { animation: riseIn 0.22s ease-out both; }
+.modal:not([hidden]) { animation: fadeIn 0.18s ease-out both; }
+.modal:not([hidden]) .modal-card { animation: riseIn 0.24s ease-out both; }
+.result:not([hidden]) { animation: riseIn 0.2s ease-out both; }
+.toast:not([hidden]) { animation: riseIn 0.22s ease-out both; }
+.btn, .home, .who, .more, .stepper button, .chip span, .control, .linkbtn { transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease; }
+.btn:active, .stepper button:active, .home:active, .who:active { transform: scale(0.97); }
+.trip { transition: background-color 0.15s ease; }
+.result, .paysw, .modal-card, .stat, .ach li, .bar, .toast, .control input, .home, .who, .who-dot, .summary { transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease; }
+
+/* Farbwahl im Profil */
+.colrow { margin: 0 0 14px; padding: 0; border: 0; min-width: 0; }
+.colrow legend { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 0; margin-bottom: 8px; font-weight: 600; }
+.colrow legend span { color: var(--muted); font-weight: 500; }
+.swatches { display: flex; gap: 10px; }
+.sw { position: relative; display: block; }
+.sw input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.sw-dot { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--c-bg); box-shadow: inset 0 0 0 1.5px var(--line); transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.sw-dot::after { content: ""; width: 20px; height: 20px; border-radius: 50%; background: var(--c-strong); }
+.sw input:checked + .sw-dot { box-shadow: 0 0 0 2.5px var(--ink); transform: scale(1.06); }
+.sw input:focus-visible + .sw-dot { outline: 3px solid var(--accent); outline-offset: 3px; }
+.sw:active .sw-dot { transform: scale(0.94); }
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+</style>
+</head>
+<body>
+
+<main class="app">
+  <header class="top">
+    <div class="top-row">
+      <button type="button" class="home" id="homeBtn" aria-label="Hauptmenü">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M3 11.5 12 4l9 7.5"></path>
+          <path d="M5.5 10v9.5h13V10"></path>
+          <path d="M10 19.5v-5h4v5"></path>
+        </svg>
+      </button>
+      <button type="button" class="who" id="whoBtn" aria-label="Profil öffnen"><span class="who-dot" id="whoDot" aria-hidden="true">?</span><span class="who-name" id="whoName">Name</span></button>
+    </div>
+    <h1 id="title" tabindex="-1">Fahrtkosten-Rechner</h1>
+    <p id="subtitle">Preis fürs Nachhausebringen: Hinweg mit Marge, Rückweg zum Spritpreis.</p>
+  </header>
+
+  <div class="stack" id="viewCalc">
+    <form id="calc" class="form" novalidate autocomplete="off">
+      <div class="paysw" id="paySwitch" role="radiogroup" aria-label="Zahlungsart" data-state="bar">
+        <input class="paysw-in" type="radio" name="zahlung" id="pay-bar" value="bar">
+        <input class="paysw-in" type="radio" name="zahlung" id="pay-ue" value="ueberweisung">
+        <div class="paysw-thumb" aria-hidden="true"></div>
+        <label class="paysw-opt" for="pay-bar">Bargeld</label>
+        <label class="paysw-opt" for="pay-ue">Überweisen</label>
+      </div>
+
+      <div class="field">
+        <label for="km">Kilometer (einfache Strecke)</label>
+        <div class="control" id="c-km">
+          <input id="km" name="km" type="text" inputmode="decimal" enterkeyhint="next" aria-describedby="hint-km err-km">
+          <span class="unit">km</span>
+        </div>
+        <p class="hint" id="hint-km">Nur den Hinweg eingeben. Der Rückweg wird automatisch dazugerechnet.</p>
+        <p class="err" id="err-km" hidden></p>
+      </div>
+
+      <div class="pair">
+        <div class="field">
+          <label for="preis">Spritpreis</label>
+          <div class="control" id="c-preis">
+            <input id="preis" name="preis" type="text" inputmode="decimal" enterkeyhint="next" aria-describedby="err-preis">
+            <span class="unit">€/l</span>
+          </div>
+          <p class="err" id="err-preis" hidden></p>
+        </div>
+        <div class="field">
+          <label for="verbrauch">Verbrauch</label>
+          <div class="control" id="c-verbrauch">
+            <input id="verbrauch" name="verbrauch" type="text" inputmode="decimal" enterkeyhint="next" aria-describedby="err-verbrauch">
+            <span class="unit">l/100 km</span>
+          </div>
+          <p class="err" id="err-verbrauch" hidden></p>
+        </div>
+      </div>
+
+      <fieldset class="field">
+        <legend>Marge</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="marge" value="100"><span>100 %</span></label>
+          <label class="chip"><input type="radio" name="marge" value="150"><span>150 %</span></label>
+          <label class="chip"><input type="radio" name="marge" value="200"><span>200 %</span></label>
+          <label class="chip"><input type="radio" name="marge" value="300"><span>300 %</span></label>
+          <label class="chip"><input type="radio" name="marge" value="custom"><span>Eigene</span></label>
+        </div>
+        <div class="control custom" id="c-eigene" hidden>
+          <input id="eigeneMarge" name="eigeneMarge" type="text" inputmode="decimal" aria-label="Eigene Marge in Prozent" aria-describedby="err-marge" placeholder="z. B. 250">
+          <span class="unit">%</span>
+        </div>
+        <p class="hint">Die Marge wird auf die Spritkosten des Hinwegs aufgeschlagen: 100 % ergeben das Doppelte, 200 % das Dreifache. Der Rückweg wird ohne Marge berechnet.</p>
+        <p class="err" id="err-marge" hidden></p>
+      </fieldset>
+
+      <div class="field">
+        <label for="personen">Personen</label>
+        <div class="stepper">
+          <button type="button" id="minus" aria-label="Eine Person weniger">−</button>
+          <div class="control" id="c-personen">
+            <input id="personen" name="personen" type="text" inputmode="numeric" pattern="[0-9]*" aria-describedby="err-personen">
+          </div>
+          <button type="button" id="plus" aria-label="Eine Person mehr">+</button>
+        </div>
+        <p class="hint">Der Preis wird aufgeteilt. Bar zahlt jede Person auf den nächsten Fünfer gerundet, bei Überweisung auf volle Euro.</p>
+        <p class="err" id="err-personen" hidden></p>
+      </div>
+
+      <div class="field">
+        <label for="erhalten">Tatsächlich erhalten</label>
+        <div class="control" id="c-erhalten">
+          <input id="erhalten" name="erhalten" type="text" inputmode="decimal" placeholder="Wie berechnet" aria-describedby="hint-erhalten err-erhalten">
+          <span class="unit">€</span>
+        </div>
+        <p class="hint" id="hint-erhalten">Optional. Trag ein, wie viel du am Ende wirklich bekommen hast. Das zählt dann in deinen Zahlen. Leer gelassen zählt der berechnete Gesamtbetrag.</p>
+        <p class="err" id="err-erhalten" hidden></p>
+      </div>
+    </form>
+
+    <section class="result" id="result" role="status" aria-live="polite" aria-label="Details zur Berechnung" hidden>
+      <p class="note" id="note" hidden></p>
+      <dl class="rows" id="rows"></dl>
+    </section>
+  </div>
+
+  <div class="stack" id="viewMenu" hidden>
+    <section class="result summary" aria-labelledby="sumLabel">
+      <span class="res-label" id="sumLabel">Erhalten insgesamt</span>
+      <p class="res-price"><span id="sumNum">0,00</span><span class="cur">€</span></p>
+      <p class="note" id="sumMeta">Noch keine Fahrten</p>
+    </section>
+
+    <button type="button" class="btn btn-fill btn-wide" id="newTrip">Neue Fahrt berechnen</button>
+
+    <section aria-labelledby="listTitle">
+      <div class="menu-head">
+        <h2 id="listTitle">Letzte Fahrten</h2>
+      </div>
+      <p class="store-note" id="storeNote" hidden>Die Fahrten sind nur in diesem Browser gespeichert.</p>
+      <ol class="trips" id="trips" hidden></ol>
+      <p class="empty" id="empty">Fahrten werden geladen …</p>
+    </section>
+
+    <p class="legal"><a href="datenschutz.html">Datenschutz</a></p>
+  </div>
+</main>
+
+<div class="bar" id="bar">
+  <div class="bar-inner">
+    <div class="bar-sums">
+      <div class="bar-sum">
+        <span class="bar-label" id="barLabel">Pro Person</span>
+        <span class="bar-price" id="barPrice">–</span>
+      </div>
+      <div class="bar-sum" id="totSum" hidden>
+        <span class="bar-label">Insgesamt</span>
+        <span class="bar-price" id="barTotal">–</span>
+      </div>
+      <button type="button" class="more" id="moreBtn" aria-expanded="false" aria-controls="result">Mehr Details <span class="chev" aria-hidden="true">▾</span></button>
+    </div>
+    <div class="bar-actions">
+      <button class="btn btn-line" type="submit" form="calc" id="applyBtn">Anwenden</button>
+      <button class="btn btn-fill" type="button" id="doneBtn">Gefahren</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="profModal" hidden>
+  <section class="modal-card prof" role="dialog" aria-modal="true" aria-labelledby="profName">
+    <div class="prof-head">
+      <span class="who-dot big" id="profDot" aria-hidden="true">?</span>
+      <div class="prof-id">
+        <h2 id="profName">Name</h2>
+        <button type="button" class="linkbtn" id="profEdit">Name ändern</button>
+      </div>
+      <button type="button" class="home prof-home" id="profHome" aria-label="Zum Hauptmenü">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M3 11.5 12 4l9 7.5"></path>
+          <path d="M5.5 10v9.5h13V10"></path>
+          <path d="M10 19.5v-5h4v5"></path>
+        </svg>
+      </button>
+    </div>
+    <h3 class="prof-h">Deine Zahlen</h3>
+    <div class="stats" id="stats"></div>
+    <h3 class="prof-h">Farben</h3>
+    <div id="colors"></div>
+    <button type="button" class="linkbtn" id="colReset">Standardfarben</button>
+
+    <h3 class="prof-h">Erfolge <span class="prof-count" id="achCount"></span></h3>
+    <ul class="ach" id="ach"></ul>
+    <p class="modal-text prof-note" id="profNote" hidden>Die Zahlen stammen aus deinen abgeschlossenen Fahrten.</p>
+    <button type="button" class="btn btn-fill btn-wide" id="profClose">Schließen</button>
+  </section>
+</div>
+
+<div class="modal" id="nameModal" hidden>
+  <form class="modal-card" id="nameForm" role="dialog" aria-modal="true" aria-labelledby="nameTitle" autocomplete="off">
+    <h2 id="nameTitle">Wie heißt du?</h2>
+    <p class="modal-text" id="nameText">Dein Name steht dann oben rechts in der App.</p>
+    <label class="modal-label" for="nameInput">Benutzername</label>
+    <input class="modal-input" id="nameInput" type="text" maxlength="20" placeholder="z. B. Max" enterkeyhint="done">
+    <div class="modal-actions">
+      <button type="button" class="btn btn-line" id="nameSkip">Später</button>
+      <button type="submit" class="btn btn-fill" id="nameSave">Speichern</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <span id="toastMsg"></span>
+  <button type="button" class="toast-act" id="toastAct" hidden></button>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'fahrtkosten-rechner-v1';
+  var DEFAULTS = { km: '120', preis: '1,85', verbrauch: '7,5', marge: '150', eigene: '', personen: '2', zahlung: 'bar' };
+  var SUBTITLE_CALC = 'Preis fürs Nachhausebringen: Hinweg mit Marge, Rückweg zum Spritpreis.';
+  var SUBTITLE_MENU = 'Deine letzten Fahrten und was du dafür bekommen hast.';
+
+  // calc:start
+  function parseNum(raw, thousands) {
+    var s = String(raw == null ? '' : raw).replace(/\s+/g, '');
+    if (s === '') return NaN;
+    if (thousands && /^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s = s.replace(/\./g, '');
+    s = s.replace(',', '.');
+    if (!/^(\d+\.?\d*|\.\d+)$/.test(s)) return NaN;
+    return parseFloat(s);
+  }
+  function pos(n) { return isFinite(n) && n > 0; }
+  function cents(x) { return Math.round(x * 100 + 1e-6) / 100; }
+  // Bargeld: nächster Fünfer (mindestens 5 €), damit jede Person mit Scheinen zahlen kann.
+  // Überweisen: volle Euro (mindestens 1 €), keine Centbeträge.
+  function roundPerPerson(x, mode) {
+    if (mode === 'ueberweisung') return Math.max(1, Math.round(x + 1e-9));
+    return Math.max(5, Math.round(x / 5 + 1e-9) * 5);
+  }
+  function calc(i) {
+    var errors = {};
+    var km = parseNum(i.km, true);
+    var price = parseNum(i.preis, false);
+    var cons = parseNum(i.verbrauch, false);
+    var custom = i.marge === 'custom';
+    var margin = custom ? parseNum(i.eigene, false) : parseFloat(i.marge);
+    var p = String(i.personen == null ? '' : i.personen).trim();
+    var persons = /^\d{1,2}$/.test(p) ? parseInt(p, 10) : NaN;
+    var mode = i.zahlung === 'ueberweisung' ? 'ueberweisung' : 'bar';
+    if (!pos(km)) errors.km = 'Kilometer eingeben, zum Beispiel 120.';
+    if (!pos(price)) errors.preis = 'Spritpreis in € pro Liter eingeben, zum Beispiel 1,85.';
+    if (!pos(cons)) errors.verbrauch = 'Verbrauch in Litern pro 100 km eingeben, zum Beispiel 7,5.';
+    if (!pos(margin)) errors.marge = custom ? 'Eigene Marge in Prozent eingeben, zum Beispiel 250.' : 'Marge auswählen.';
+    if (!(persons >= 1 && persons <= 99)) errors.personen = 'Zwischen 1 und 99 Personen eingeben.';
+    if (Object.keys(errors).length) return { ok: false, errors: errors };
+    var liters = km * cons / 100;                    // Sprit für eine Strecke
+    var fuelOne = liters * price;                    // Spritkosten für eine Strecke
+    var outbound = cents(fuelOne * (1 + margin / 100)); // Hinweg: Spritkosten plus Marge als Aufschlag
+    var back = cents(fuelOne);                       // Rückweg ohne Marge
+    var exact = cents(outbound + back);              // genauer Gesamtpreis
+    var perPerson = roundPerPerson(exact / persons, mode); // jede Person zahlt einen runden Betrag
+    return {
+      ok: true,
+      km: km,
+      price: price,
+      cons: cons,
+      liters: liters * 2,
+      fuel: cents(fuelOne * 2),
+      outbound: outbound,
+      back: back,
+      exact: exact,
+      total: cents(perPerson * persons),             // das bekommst du wirklich
+      perPerson: perPerson,
+      margin: margin,
+      persons: persons,
+      mode: mode
+    };
+  }
+  // calc:end
+
+  var NBSP = ' ';
+  var $ = function (id) { return document.getElementById(id); };
+  var form = $('calc'), result = $('result'), note = $('note');
+  var f = { km: $('km'), preis: $('preis'), verbrauch: $('verbrauch'), eigene: $('eigeneMarge'), personen: $('personen'), erhalten: $('erhalten') };
+  var customWrap = $('c-eigene');
+  var radios = Array.prototype.slice.call(document.querySelectorAll('input[name="marge"]'));
+  var payRadios = Array.prototype.slice.call(document.querySelectorAll('input[name="zahlung"]'));
+  var paySw = $('paySwitch');
+  var KEYS = ['km', 'preis', 'verbrauch', 'marge', 'personen'];
+  var CONTROL = { km: 'c-km', preis: 'c-preis', verbrauch: 'c-verbrauch', marge: 'c-eigene', personen: 'c-personen' };
+  var INPUT = { km: f.km, preis: f.preis, verbrauch: f.verbrauch, marge: f.eigene, personen: f.personen };
+  var nf = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  var pf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 });
+  var dfDate = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  var dfTime = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+  function num(x) { var n = Number(x); return isFinite(n) ? n : 0; }
+  // Was wirklich erhalten wurde; ohne Eingabe zählt der berechnete Gesamtbetrag.
+  function got(t) { return t && t.received != null && isFinite(Number(t.received)) ? Number(t.received) : num(t && t.total); }
+  function eur(x) { return nf.format(x) + NBSP + '€'; }
+  // Runde Beträge ohne Cent ("29 €"), sonst mit Cent ("4,50 €").
+  var pf0 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+  function isWhole(x) { return Math.abs(x - Math.round(x)) < 1e-9; }
+  function plain(x) { return isWhole(x) ? pf0.format(x) : nf.format(x); }
+  function money(x) { return plain(x) + NBSP + '€'; }
+  function reduceMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  // ---------- Eingaben ----------
+  function getMarge() {
+    var c = document.querySelector('input[name="marge"]:checked');
+    return c ? c.value : '';
+  }
+  function getPay() {
+    var c = document.querySelector('input[name="zahlung"]:checked');
+    return c && c.value === 'ueberweisung' ? 'ueberweisung' : 'bar';
+  }
+  // Färbt den Hintergrund (Bargeld grünlich, Überweisen bläulich) und stellt den Schalter ein.
+  // Im Hauptmenü bleibt der Hintergrund neutral.
+  function applyPay() {
+    var mode = getPay();
+    var menu = document.body.getAttribute('data-view') === 'menu';
+    document.documentElement.setAttribute('data-pay', menu ? 'none' : mode);
+    paySw.setAttribute('data-state', mode === 'ueberweisung' ? 'ue' : 'bar');
+    if (typeof applyTheme === 'function') applyTheme();
+  }
+  function setPay(mode) {
+    var r = $(mode === 'ueberweisung' ? 'pay-ue' : 'pay-bar');
+    if (!r.checked) {
+      r.checked = true;
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }
+  function readInputs() {
+    return { km: f.km.value, preis: f.preis.value, verbrauch: f.verbrauch.value, marge: getMarge(), eigene: f.eigene.value, personen: f.personen.value, zahlung: getPay() };
+  }
+  function setInputs(s) {
+    f.km.value = s.km;
+    f.preis.value = s.preis;
+    f.verbrauch.value = s.verbrauch;
+    f.eigene.value = s.eigene;
+    f.personen.value = s.personen;
+    radios.forEach(function (r) { r.checked = (r.value === s.marge); });
+    payRadios.forEach(function (r) { r.checked = (r.value === (s.zahlung === 'ueberweisung' ? 'ueberweisung' : 'bar')); });
+    customWrap.hidden = s.marge !== 'custom';
+  }
+  function loadSaved() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return null;
+      var o = JSON.parse(raw);
+      var ok = o && typeof o === 'object';
+      ['km', 'preis', 'verbrauch', 'marge', 'eigene', 'personen'].forEach(function (k) {
+        if (!ok || typeof o[k] !== 'string') ok = false;
+      });
+      if (ok && ['100', '150', '200', '300', 'custom'].indexOf(o.marge) === -1) ok = false;
+      if (ok && o.zahlung !== 'ueberweisung') o.zahlung = 'bar';
+      return ok ? o : null;
+    } catch (e) { return null; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(readInputs())); } catch (e) { /* optional */ }
+  }
+
+  // ---------- Ergebnis ----------
+  function setNote(text) {
+    note.textContent = text || '';
+    note.hidden = !text;
+    syncDetails();
+  }
+  var detailsOpen = false;
+  function syncDetails() {
+    var hasNote = !note.hidden;
+    result.hidden = !(detailsOpen || hasNote);
+    $('rows').hidden = !detailsOpen;
+    var b = $('moreBtn');
+    b.setAttribute('aria-expanded', detailsOpen ? 'true' : 'false');
+    b.firstChild.nodeValue = detailsOpen ? 'Weniger Details ' : 'Mehr Details ';
+  }
+  function renderRows(list) {
+    var dl = $('rows');
+    dl.textContent = '';
+    list.forEach(function (r) {
+      var row = document.createElement('div');
+      row.className = 'row' + (r[2] ? ' ' + r[2] : '');
+      var dt = document.createElement('dt');
+      var dd = document.createElement('dd');
+      dt.textContent = r[0];
+      dd.textContent = r[1];
+      row.appendChild(dt);
+      row.appendChild(dd);
+      dl.appendChild(row);
+    });
+  }
+  function render(res) {
+    $('barLabel').textContent = res.persons > 1 ? 'Pro Person' : 'Preis';
+    $('barPrice').textContent = money(res.perPerson);
+    $('totSum').hidden = res.persons <= 1;
+    $('erhalten').placeholder = money(res.total);
+    $('barTotal').textContent = money(res.total);
+    var rows = [
+      ['Strecke hin und zurück', pf.format(res.km * 2) + NBSP + 'km'],
+      ['Spritbedarf gesamt', nf.format(res.liters) + NBSP + 'l'],
+      ['Hinweg mit ' + pf.format(res.margin) + NBSP + '% Marge', eur(res.outbound)],
+      ['Rückweg ohne Marge', eur(res.back)],
+      ['Genauer Preis', eur(res.exact)],
+      ['Gerundet auf', res.mode === 'bar' ? 'nächsten Fünfer' : 'volle Euro'],
+      ['Gesamtbetrag gerundet', money(res.total)]
+    ];
+    if (res.persons > 1) rows.push(['Aufgeteilt auf ' + res.persons + NBSP + 'Personen', 'je ' + money(res.perPerson)]);
+    // Gewinn: was du bekommst, minus der Sprit für Hin- und Rückfahrt
+    var rec = f.erhalten.value.trim() === '' ? NaN : parseNum(f.erhalten.value, true);
+    var hasRec = isFinite(rec) && rec >= 0 && rec <= 100000;
+    var income = hasRec ? Math.round(rec * 100) / 100 : res.total;
+    rows.push(['Spritkosten hin und zurück', money(res.fuel)]);
+    if (hasRec) rows.push(['Tatsächlich erhalten', money(income)]);
+    rows.push([hasRec ? 'Gewinn (erhalten minus Sprit)' : 'Gewinn (Preis minus Sprit)', money(Math.round((income - res.fuel) * 100) / 100), 'profit']);
+    renderRows(rows);
+  }
+  function renderEmpty() {
+    $('barLabel').textContent = 'Preis';
+    $('barPrice').textContent = '–';
+    $('totSum').hidden = true;
+    $('erhalten').placeholder = 'Wie berechnet';
+    renderRows([]);
+  }
+
+  function clearFieldError(key) {
+    var e = $('err-' + key);
+    e.hidden = true;
+    e.textContent = '';
+    $(CONTROL[key]).classList.remove('invalid');
+    INPUT[key].removeAttribute('aria-invalid');
+  }
+  function clearErrors() { KEYS.forEach(clearFieldError); }
+  function showErrors(errors, focus) {
+    var first = null;
+    KEYS.forEach(function (k) {
+      if (!errors[k]) return;
+      var e = $('err-' + k);
+      e.textContent = errors[k];
+      e.hidden = false;
+      $(CONTROL[k]).classList.add('invalid');
+      INPUT[k].setAttribute('aria-invalid', 'true');
+      if (!first) first = INPUT[k];
+    });
+    if (focus && first) first.focus();
+  }
+
+  // Anwenden: rechnet neu, zeigt fehlende Angaben an den Feldern und springt zur Aufschlüsselung.
+  // Gibt true zurück, wenn alle Angaben gültig sind.
+  function apply(user) {
+    clearErrors();
+    var res = calc(readInputs());
+    if (!res.ok) {
+      renderEmpty();
+      setNote('Es fehlen Angaben. Prüfe die markierten Felder.');
+      showErrors(res.errors, user);
+      return false;
+    }
+    render(res);
+    setNote('');
+    if (user) {
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      if (!result.hidden) result.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
+    }
+    return true;
+  }
+
+  function keyOf(el) {
+    if (!el) return null;
+    if (el.name === 'marge' || el.id === 'eigeneMarge') return 'marge';
+    return KEYS.indexOf(el.id) > -1 ? el.id : null;
+  }
+  // Rechnet bei jeder Eingabe sofort neu, ohne Fehlermeldungen in den Feldern.
+  function live() {
+    var res = calc(readInputs());
+    if (res.ok) {
+      render(res);
+      setNote('');
+    } else {
+      renderEmpty();
+      setNote('Fülle alle Felder aus, dann erscheint der Preis.');
+    }
+  }
+  function onChange(e) {
+    var k = keyOf(e && e.target);
+    if (k) clearFieldError(k);
+    applyPay();
+    save();
+    live();
+  }
+
+  form.addEventListener('input', onChange);
+  form.addEventListener('change', onChange);
+  form.addEventListener('submit', function (e) { e.preventDefault(); apply(true); });
+
+  radios.forEach(function (r) {
+    r.addEventListener('change', function () {
+      var custom = getMarge() === 'custom';
+      customWrap.hidden = !custom;
+      if (custom) f.eigene.focus();
+    });
+  });
+
+  // Schalter: antippen oder von links nach rechts wischen.
+  var payDrag = null;
+  var payThumb = paySw.querySelector('.paysw-thumb');
+  paySw.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    payDrag = {
+      id: e.pointerId,
+      rect: paySw.getBoundingClientRect(),
+      startX: e.clientX,
+      startMode: getPay(),
+      moved: false,
+      x: 0,
+      half: payThumb.offsetWidth
+    };
+    try { paySw.setPointerCapture(e.pointerId); } catch (x) { /* optional */ }
+  });
+  paySw.addEventListener('pointermove', function (e) {
+    var d = payDrag;
+    if (!d || e.pointerId !== d.id) return;
+    var dx = e.clientX - d.startX;
+    if (!d.moved && Math.abs(dx) < 6) return;
+    d.moved = true;
+    paySw.classList.add('dragging');
+    var base = d.startMode === 'ueberweisung' ? d.half : 0;
+    d.x = Math.max(0, Math.min(d.half, base + dx));
+    payThumb.style.transform = 'translateX(' + d.x + 'px)';
+    paySw.setAttribute('data-state', d.x > d.half / 2 ? 'ue' : 'bar');
+  });
+  function endPayDrag(e, cancelled) {
+    var d = payDrag;
+    if (!d || e.pointerId !== d.id) return;
+    payDrag = null;
+    paySw.classList.remove('dragging');
+    payThumb.style.transform = '';
+    var mode;
+    if (cancelled) mode = d.startMode;
+    else if (d.moved) mode = d.x > d.half / 2 ? 'ueberweisung' : 'bar';
+    else mode = (e.clientX - d.rect.left) > d.rect.width / 2 ? 'ueberweisung' : 'bar';
+    setPay(mode);
+    applyPay();
+  }
+  paySw.addEventListener('pointerup', function (e) { endPayDrag(e, false); });
+  paySw.addEventListener('pointercancel', function (e) { endPayDrag(e, true); });
+
+  [f.km, f.preis, f.verbrauch, f.eigene, f.personen].forEach(function (el) {
+    el.addEventListener('focus', function () {
+      setTimeout(function () { try { el.select(); } catch (x) { /* ignore */ } }, 0);
+    });
+  });
+
+  function step(d) {
+    var n = parseInt(f.personen.value, 10);
+    if (!(n >= 1)) n = 1;
+    n = Math.min(99, Math.max(1, n + d));
+    f.personen.value = String(n);
+    onChange({ target: f.personen });
+  }
+  $('minus').addEventListener('click', function () { step(-1); });
+  $('plus').addEventListener('click', function () { step(1); });
+
+  // ---------- Hinweis-Leiste (Toast) ----------
+  var toast = $('toast'), toastMsg = $('toastMsg'), toastAct = $('toastAct');
+  var toastTimer = null, toastFn = null;
+  function hideToast() {
+    clearTimeout(toastTimer);
+    toast.hidden = true;
+    toastFn = null;
+  }
+  function showToast(msg, label, fn, isError) {
+    clearTimeout(toastTimer);
+    toastMsg.textContent = msg;
+    toast.classList.toggle('is-error', !!isError);
+    toastAct.hidden = !label;
+    toastAct.textContent = label || '';
+    toastFn = fn || null;
+    toast.hidden = false;
+    toastTimer = setTimeout(hideToast, isError ? 8000 : 6000);
+  }
+  toastAct.addEventListener('click', function () {
+    var fn = toastFn;
+    hideToast();
+    if (fn) fn();
+  });
+
+  // ---------- Speicher für Fahrten ----------
+  // Mit Konto: privat pro Person im db-Speicher (data/users/<id>). Ohne: nur in diesem Browser.
+  function withRetry(fn) {
+    return fn().catch(function (e) {
+      if (e && e.code === 'unavailable') {
+        return new Promise(function (r) { setTimeout(r, 300 + Math.random() * 400); }).then(fn);
+      }
+      throw e;
+    });
+  }
+  function byNewest(a, b) { return num(b.ts) - num(a.ts); }
+
+  function makeDbStore(db, uid) {
+    var col = db.collection('data/users/' + uid);
+    return {
+      kind: 'db',
+      add: function (trip) {
+        var ref = col.doc();
+        return withRetry(function () { return ref.set(trip); });
+      },
+      remove: function (id) {
+        return withRetry(function () { return col.doc(id).delete(); });
+      },
+      getProfile: function () {
+        return withRetry(function () { return col.doc('profil').get(); }).then(function (snap) {
+          var d = snap && snap.exists ? snap.data() : null;
+          return d ? JSON.parse(JSON.stringify(d)) : {};
+        });
+      },
+      setProfile: function (obj) {
+        return withRetry(function () { return col.doc('profil').set(obj); });
+      },
+      subscribe: function (cb) {
+        return col.orderBy('ts', 'desc').limit(1000).onSnapshot(function (snap) {
+          cb(snap.docs.filter(function (d) { return d.id !== 'profil'; }).map(function (d) { return Object.assign({ id: d.id }, d.data() || {}); }));
+        }, function (err) { cb(null, err); });
+      }
+    };
+  }
+
+  function makeLocalStore() {
+    var LKEY = 'fahrtkosten-fahrten-v1';
+    var items = [];
+    var listeners = [];
+    try {
+      var raw = localStorage.getItem(LKEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(arr)) {
+        items = arr.filter(function (t) { return t && typeof t === 'object' && typeof t.id === 'string'; });
+      }
+    } catch (e) { items = []; }
+    function persist() {
+      try { localStorage.setItem(LKEY, JSON.stringify(items)); } catch (e) { /* bleibt im Speicher */ }
+    }
+    function emit() {
+      var copy = items.slice().sort(byNewest);
+      listeners.forEach(function (fn) { fn(copy); });
+    }
+    return {
+      kind: 'local',
+      add: function (trip) {
+        var t = Object.assign({ id: 'l' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }, trip);
+        items.push(t);
+        persist();
+        emit();
+        return Promise.resolve();
+      },
+      remove: function (id) {
+        items = items.filter(function (t) { return t.id !== id; });
+        persist();
+        emit();
+        return Promise.resolve();
+      },
+      getProfile: function () { return Promise.resolve({}); },
+      setProfile: function () { return Promise.resolve(); },
+      subscribe: function (cb) {
+        listeners.push(cb);
+        cb(items.slice().sort(byNewest));
+        return function () { listeners = listeners.filter(function (fn) { return fn !== cb; }); };
+      }
+    };
+  }
+
+  var store = null;
+  var storeReady = (async function () {
+    try {
+      var c = window.claude;
+      if (c && typeof c.use === 'function') {
+        var db = await c.use('db');
+        var user = await c.use('user');
+        var uid = user ? await user.id() : null;
+        if (db && uid) return makeDbStore(db, uid);
+      }
+    } catch (e) { /* weiter mit lokalem Speicher */ }
+    return makeLocalStore();
+  })();
+
+  // ---------- Hauptmenü ----------
+  var trips = [];
+  var listState = 'loading';   // loading | ready | error
+  var confirmId = null;
+  var listEl = $('trips'), emptyEl = $('empty');
+
+  function el(tagName, cls, text) {
+    var e = document.createElement(tagName);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function fmtDate(ts) {
+    var d = new Date(num(ts));
+    if (!num(ts) || isNaN(d.getTime())) return 'Datum unbekannt';
+    return dfDate.format(d) + ' · ' + dfTime.format(d) + ' Uhr';
+  }
+  function actionButton(label, act, id, cls) {
+    var b = el('button', 't-link' + (cls ? ' ' + cls : ''), label);
+    b.type = 'button';
+    b.setAttribute('data-act', act);
+    b.setAttribute('data-id', id);
+    return b;
+  }
+  function tripRow(t) {
+    var km = num(t.km);
+    var persons = Math.max(1, Math.round(num(t.persons)));
+    var li = el('li', 'trip');
+
+    var left = el('div', 't-left');
+    var dateLine = el('div', 't-date', fmtDate(t.ts));
+    if (t.mode === 'bar' || t.mode === 'ueberweisung') {
+      dateLine.appendChild(el('span', 'pill ' + (t.mode === 'bar' ? 'pill-bar' : 'pill-ue'), t.mode === 'bar' ? 'Bar' : 'Überweisung'));
+    }
+    left.appendChild(dateLine);
+    var kmLine = el('div', 't-km');
+    kmLine.appendChild(el('strong', null, pf.format(km) + NBSP + 'km'));
+    kmLine.appendChild(el('span', 't-muted', ' · hin und zurück ' + pf.format(km * 2) + NBSP + 'km'));
+    left.appendChild(kmLine);
+    var meta = (persons === 1 ? '1 Person' : persons + ' Personen');
+    if (persons > 1) meta += ' · ' + money(num(t.perPerson)) + ' pro Person';
+    meta += ' · ' + pf.format(num(t.margin)) + NBSP + '% Marge';
+    left.appendChild(el('div', 't-muted', meta));
+    li.appendChild(left);
+
+    var right = el('div', 't-right');
+    right.appendChild(el('span', 't-lab', 'Erhalten'));
+    right.appendChild(el('span', 't-total', money(got(t))));
+    if (Math.abs(got(t) - num(t.total)) > 0.004) right.appendChild(el('span', 't-calc', 'berechnet ' + money(num(t.total))));
+    li.appendChild(right);
+
+    var actions = el('div', 't-actions');
+    if (confirmId === t.id) {
+      actions.appendChild(el('span', 't-ask', 'Fahrt entfernen?'));
+      actions.appendChild(actionButton('Entfernen', 'del', t.id, 'danger'));
+      actions.appendChild(actionButton('Abbrechen', 'cancel', t.id));
+    } else {
+      var ask = actionButton('Entfernen', 'ask', t.id);
+      ask.setAttribute('aria-label', 'Fahrt vom ' + fmtDate(t.ts) + ' entfernen');
+      actions.appendChild(ask);
+    }
+    li.appendChild(actions);
+    return li;
+  }
+  function renderMenu() {
+    var sum = 0, kmAll = 0;
+    trips.forEach(function (t) { sum += got(t); kmAll += num(t.km) * 2; });
+    $('sumNum').textContent = plain(Math.round(sum * 100) / 100);
+    var n = trips.length;
+    $('sumMeta').textContent = n === 0
+      ? 'Noch keine Fahrten'
+      : n + ' ' + (n === 1 ? 'Fahrt' : 'Fahrten') + ' · ' + pf.format(kmAll) + NBSP + 'km gefahren';
+
+    listEl.textContent = '';
+    if (n > 0) {
+      trips.forEach(function (t) { listEl.appendChild(tripRow(t)); });
+    }
+    listEl.hidden = n === 0;
+    emptyEl.hidden = n > 0;
+    if (n === 0) {
+      emptyEl.textContent = listState === 'loading'
+        ? 'Fahrten werden geladen …'
+        : listState === 'error'
+          ? 'Die Fahrten konnten nicht geladen werden. Lade die Seite neu und versuche es noch einmal.'
+          : 'Noch keine Fahrten. Rechne eine Fahrt aus und tippe auf „Gefahren“, dann erscheint sie hier.';
+    }
+  }
+
+  function removeErrorText(e) {
+    return 'Die Fahrt konnte nicht entfernt werden. Versuche es noch einmal.';
+  }
+  listEl.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('button[data-act]') : null;
+    if (!b) return;
+    var act = b.getAttribute('data-act');
+    var id = b.getAttribute('data-id');
+    if (act === 'ask') { confirmId = id; renderMenu(); return; }
+    if (act === 'cancel') { confirmId = null; renderMenu(); return; }
+    if (act === 'del' && store) {
+      b.disabled = true;
+      Promise.resolve().then(function () { return store.remove(id); }).then(function () {
+        confirmId = null;
+        renderMenu();
+      }, function (err) {
+        b.disabled = false;
+        showToast(removeErrorText(err), null, null, true);
+      });
+    }
+  });
+
+  storeReady.then(function (s) {
+    store = s;
+    $('storeNote').hidden = s.kind !== 'local';
+    s.subscribe(function (list, err) {
+      if (list) { trips = list; listState = 'ready'; }
+      else if (err && listState !== 'ready') { listState = 'error'; }
+      renderMenu();
+    });
+  });
+
+  // ---------- Ansichten ----------
+  var home = $('homeBtn'), title = $('title');
+  function showView(v) {
+    var menu = v === 'menu';
+    $('viewCalc').hidden = menu;
+    $('viewMenu').hidden = !menu;
+    $('bar').hidden = menu;
+    document.body.setAttribute('data-view', menu ? 'menu' : 'calc');
+    applyPay();
+    title.textContent = menu ? 'Hauptmenü' : 'Fahrtkosten-Rechner';
+    $('subtitle').textContent = menu ? SUBTITLE_MENU : SUBTITLE_CALC;
+    if (menu) home.setAttribute('aria-current', 'page'); else home.removeAttribute('aria-current');
+    confirmId = null;
+    if (menu) renderMenu();
+    hideToast();
+    var shown = $(menu ? 'viewMenu' : 'viewCalc');
+    shown.classList.remove('enter'); void shown.offsetWidth; shown.classList.add('enter');
+    shown.addEventListener('animationend', function h() { shown.classList.remove('enter'); shown.removeEventListener('animationend', h); });
+    window.scrollTo(0, 0);
+    try { title.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  home.addEventListener('click', function () { if (document.body.getAttribute('data-view') !== 'menu') showView('menu'); });
+  $('newTrip').addEventListener('click', function () { showView('calc'); });
+
+  // ---------- Gefahren: Fahrt abschließen ----------
+  var doneBtn = $('doneBtn');
+  $('moreBtn').addEventListener('click', function () {
+    detailsOpen = !detailsOpen;
+    syncDetails();
+    if (detailsOpen) result.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'nearest' });
+  });
+  syncDetails();
+  var busy = false;
+  function saveErrorText(err) {
+    var code = err && err.code;
+    if (code === 'quota_exceeded') return 'Der Speicher ist voll. Entferne alte Fahrten im Hauptmenü und versuche es noch einmal.';
+    if (code === 'invalid_argument') return 'Mit diesem Zugang kann nichts gespeichert werden.';
+    return 'Die Fahrt konnte nicht gespeichert werden. Versuche es noch einmal.';
+  }
+  function clearReceivedError() {
+    $('err-erhalten').hidden = true;
+    $('err-erhalten').textContent = '';
+    $('c-erhalten').classList.remove('invalid');
+    f.erhalten.removeAttribute('aria-invalid');
+  }
+  f.erhalten.addEventListener('input', function () { clearReceivedError(); live(); });
+  async function finish() {
+    if (busy) return;
+    if (!apply(true)) {
+      showToast('Es fehlen Angaben. Die Fahrt wurde nicht gespeichert.', null, null, true);
+      return;
+    }
+    var rawRec = f.erhalten.value.trim();
+    var received = null;
+    if (rawRec !== '') {
+      received = parseNum(rawRec, true);
+      if (!(isFinite(received) && received >= 0 && received <= 100000)) {
+        $('err-erhalten').textContent = 'Gib einen Betrag in Euro ein, zum Beispiel 45 oder 45,50.';
+        $('err-erhalten').hidden = false;
+        $('c-erhalten').classList.add('invalid');
+        f.erhalten.setAttribute('aria-invalid', 'true');
+        f.erhalten.focus();
+        showToast('Der erhaltene Betrag ist ungültig. Die Fahrt wurde nicht gespeichert.', null, null, true);
+        return;
+      }
+      received = Math.round(received * 100) / 100;
+    }
+    var res = calc(readInputs());
+    var trip = {
+      v: 1,
+      ts: Date.now(),
+      km: res.km,
+      persons: res.persons,
+      margin: res.margin,
+      price: res.price,
+      cons: res.cons,
+      outbound: res.outbound,
+      back: res.back,
+      exact: res.exact,
+      mode: res.mode,
+      total: res.total,
+      fuel: res.fuel,
+      perPerson: res.perPerson
+    };
+    if (received !== null) trip.received = received;
+    busy = true;
+    doneBtn.disabled = true;
+    doneBtn.textContent = 'Speichert …';
+    try {
+      var s = await storeReady;
+      await s.add(trip);
+      f.km.value = '';
+      clearFieldError('km');
+      f.erhalten.value = '';
+      clearReceivedError();
+      save();
+      live();
+      showView('menu');
+      showToast('Fahrt gespeichert: ' + money(received !== null ? received : trip.total) + ' erhalten.', null, null, false);
+    } catch (err) {
+      showToast(saveErrorText(err), null, null, true);
+    } finally {
+      busy = false;
+      doneBtn.disabled = false;
+      doneBtn.textContent = 'Gefahren';
+    }
+  }
+  doneBtn.addEventListener('click', function () { finish(); });
+
+  // ---------- Farben ----------
+  var PALETTES = [['gruen', 'Grün'], ['blau', 'Blau'], ['violett', 'Violett'], ['orange', 'Orange'], ['grau', 'Grau']];
+  var COLOR_ROWS = [['menu', 'Hauptmenü'], ['bar', 'Bargeld'], ['ue', 'Überweisen']];
+  var DEFAULT_COLORS = { menu: 'grau', bar: 'gruen', ue: 'blau' };
+  var CKEY = 'fahrtkosten-farben-v1';
+  var colors = Object.assign({}, DEFAULT_COLORS);
+  function palName(id) { for (var i = 0; i < PALETTES.length; i++) if (PALETTES[i][0] === id) return PALETTES[i][1]; return ''; }
+  function validColors(o) {
+    if (!o || typeof o !== 'object') return null;
+    var out = {};
+    for (var k in DEFAULT_COLORS) { out[k] = palName(o[k]) ? o[k] : DEFAULT_COLORS[k]; }
+    return out;
+  }
+  var THEME_VARS = [['bg', 'bg'], ['surface', 'surface'], ['ink', 'ink'], ['muted', 'muted'], ['line', 'line'], ['accent', 'accent'], ['on-accent', 'onaccent'], ['panel', 'panel'], ['on-panel-muted', 'onpanelmuted']];
+  // Die gewählte Palette färbt die ganze App: Hintergrund, Flächen, Schrift, Knöpfe und Karten.
+  function applyTheme() {
+    var rs = document.documentElement.style;
+    var menu = document.body.getAttribute('data-view') === 'menu';
+    var id = menu ? colors.menu : (getPay() === 'ueberweisung' ? colors.ue : colors.bar);
+    THEME_VARS.forEach(function (v) { rs.setProperty('--' + v[0], 'var(--pal-' + id + '-' + v[1] + ')'); });
+    ['bar', 'ue'].forEach(function (m) {
+      rs.setProperty('--' + m + '-strong', 'var(--pal-' + colors[m] + '-accent)');
+      rs.setProperty('--' + m + '-chip', 'var(--pal-' + colors[m] + '-chip)');
+      rs.setProperty('--' + m + '-ink', 'var(--pal-' + colors[m] + '-chipink)');
+    });
+  }
+  function loadColors() {
+    try { var c = validColors(JSON.parse(localStorage.getItem(CKEY) || 'null')); if (c) colors = c; } catch (e) { /* Standard */ }
+  }
+  function saveColors() {
+    try { localStorage.setItem(CKEY, JSON.stringify(colors)); } catch (e) { /* bleibt im Speicher */ }
+    applyTheme();
+    syncProfile();
+  }
+  function renderColors() {
+    var host = $('colors'); host.textContent = '';
+    COLOR_ROWS.forEach(function (r) {
+      var fs = document.createElement('fieldset'); fs.className = 'colrow';
+      var lg = document.createElement('legend');
+      lg.appendChild(document.createTextNode(r[1]));
+      var nm = document.createElement('span'); nm.textContent = palName(colors[r[0]]); lg.appendChild(nm);
+      fs.appendChild(lg);
+      var wrap = document.createElement('div'); wrap.className = 'swatches';
+      PALETTES.forEach(function (pl) {
+        var lab = document.createElement('label'); lab.className = 'sw';
+        var inp = document.createElement('input'); inp.type = 'radio'; inp.name = 'col-' + r[0]; inp.value = pl[0];
+        inp.checked = colors[r[0]] === pl[0];
+        inp.setAttribute('aria-label', pl[1]);
+        var dot = document.createElement('span'); dot.className = 'sw-dot';
+        dot.style.setProperty('--c-bg', 'var(--pal-' + pl[0] + '-bg)');
+        dot.style.setProperty('--c-strong', 'var(--pal-' + pl[0] + '-accent)');
+        inp.addEventListener('change', function () {
+          colors[r[0]] = pl[0]; nm.textContent = pl[1]; saveColors();
+        });
+        lab.appendChild(inp); lab.appendChild(dot); wrap.appendChild(lab);
+      });
+      fs.appendChild(wrap); host.appendChild(fs);
+    });
+  }
+  $('colReset').addEventListener('click', function () {
+    colors = Object.assign({}, DEFAULT_COLORS); saveColors(); renderColors();
+  });
+  // Name und Farben liegen zusätzlich im Speicher der App (db), falls der Browser lokale Daten vergisst.
+  function syncProfile() {
+    var obj = { colors: Object.assign({}, colors) };
+    if (userName) obj.name = userName;
+    return storeReady.then(function (st) { return st.setProfile(obj); }).catch(function () { /* bleibt auf diesem Gerät */ });
+  }
+
+  // ---------- Benutzername ----------
+  var NKEY = 'fahrtkosten-name-v1', userName = '', nameAsked = false;
+  function loadName() {
+    try {
+      var r = JSON.parse(localStorage.getItem(NKEY) || 'null');
+      if (r && typeof r.name === 'string') { userName = r.name; nameAsked = true; }
+    } catch (e) { /* ohne Speicher */ }
+  }
+  function saveName(n) {
+    userName = n; nameAsked = true;
+    try { localStorage.setItem(NKEY, JSON.stringify({ name: n })); } catch (e) { /* bleibt im Speicher */ }
+    renderName();
+    if (n) syncProfile();
+  }
+  function renderName() {
+    $('whoName').textContent = userName || 'Name festlegen';
+    $('whoDot').textContent = userName ? Array.from(userName)[0] : '?';
+    $('whoBtn').setAttribute('aria-label', userName ? 'Name ändern, aktuell ' + userName : 'Namen festlegen');
+  }
+  var nameModal = $('nameModal'), nameInput = $('nameInput'), nameReturn = null;
+  function openName() {
+    nameReturn = document.activeElement;
+    nameInput.value = userName;
+    $('nameTitle').textContent = userName ? 'Name ändern' : 'Wie heißt du?';
+    $('nameSkip').textContent = userName ? 'Abbrechen' : 'Später';
+    nameModal.hidden = false;
+    nameInput.focus();
+  }
+  var nameFromProfile = false;
+  function closeName() {
+    nameModal.hidden = true;
+    if (nameFromProfile) { nameFromProfile = false; renderProfile(); profModal.hidden = false; $('profClose').focus(); return; }
+    if (nameReturn && nameReturn.focus) { try { nameReturn.focus(); } catch (e) { /* ignore */ } }
+  }
+  // ---------- Profil mit Zahlen und Erfolgen ----------
+  var profModal = $('profModal'), profReturn = null;
+  var ACH = [
+    ['Erste Fahrt', 'Schließe deine erste Fahrt ab', 'trips', 1],
+    ['Stammfahrer', '10 Fahrten abgeschlossen', 'trips', 10],
+    ['Profi am Steuer', '50 Fahrten abgeschlossen', 'trips', 50],
+    ['Die ersten 100', '100 km gefahren', 'km', 100],
+    ['Langstrecke', '500 km gefahren', 'km', 500],
+    ['Tausender', '1.000 km gefahren', 'km', 1000],
+    ['Fünftausender', '5.000 km gefahren', 'km', 5000],
+    ['Erstes Trinkgeld', '50 € erhalten', 'money', 50],
+    ['Tankfüllung drin', '250 € erhalten', 'money', 250],
+    ['Kleine Kasse', '1.000 € erhalten', 'money', 1000],
+    ['Kleine Runde', '10 Personen gefahren', 'persons', 10],
+    ['Busfahrer', '50 Personen gefahren', 'persons', 50]
+  ];
+  function totals() {
+    var t = { trips: trips.length, km: 0, money: 0, persons: 0, longest: 0, bar: 0, ue: 0 };
+    trips.forEach(function (x) {
+      var k = num(x.km) * 2;
+      t.km += k; t.money += got(x); t.persons += num(x.persons);
+      if (k > t.longest) t.longest = k;
+      if (x.mode === 'ueberweisung') t.ue++; else t.bar++;
+    });
+    t.money = Math.round(t.money * 100) / 100;
+    return t;
+  }
+  function renderProfile() {
+    var t = totals();
+    $('profName').textContent = userName || 'Ohne Namen';
+    $('profDot').textContent = userName ? Array.from(userName)[0] : '?';
+    $('profEdit').textContent = userName ? 'Name ändern' : 'Namen festlegen';
+    var cells = [
+      [pf.format(Math.round(t.km)) + NBSP + 'km', 'gefahren (hin und zurück)'],
+      [money(t.money), 'erhalten insgesamt'],
+      [pf.format(t.trips), t.trips === 1 ? 'Fahrt' : 'Fahrten'],
+      [pf.format(t.persons), t.persons === 1 ? 'Person gefahren' : 'Personen gefahren'],
+      [pf.format(Math.round(t.longest)) + NBSP + 'km', 'längste Fahrt'],
+      [t.trips ? money(t.money / t.trips) : '–', 'im Schnitt pro Fahrt']
+    ];
+    var st = $('stats'); st.textContent = '';
+    cells.forEach(function (c) {
+      var d = document.createElement('div'); d.className = 'stat';
+      var b = document.createElement('b'); b.textContent = c[0];
+      var sp = document.createElement('span'); sp.textContent = c[1];
+      d.appendChild(b); d.appendChild(sp); st.appendChild(d);
+    });
+    var ul = $('ach'); ul.textContent = '';
+    var done = 0;
+    ACH.forEach(function (a) {
+      var val = t[a[2]], ok = val >= a[3]; if (ok) done++;
+      var li = document.createElement('li'); if (ok) li.className = 'done';
+      var m = document.createElement('span'); m.className = 'medal'; m.setAttribute('aria-hidden', 'true'); m.textContent = ok ? '✓' : '•';
+      var body = document.createElement('div'); body.className = 'a-body';
+      var ti = document.createElement('span'); ti.className = 'a-title'; ti.textContent = a[0] + (ok ? '' : ' (gesperrt)');
+      var su = document.createElement('span'); su.className = 'a-sub';
+      su.textContent = ok ? a[1] : a[1] + ' · ' + pf.format(Math.round(val)) + ' von ' + pf.format(a[3]);
+      body.appendChild(ti); body.appendChild(su);
+      if (!ok) { var pr = document.createElement('progress'); pr.max = a[3]; pr.value = Math.min(val, a[3]); pr.setAttribute('aria-hidden', 'true'); body.appendChild(pr); }
+      li.appendChild(m); li.appendChild(body); ul.appendChild(li);
+    });
+    $('achCount').textContent = done + ' von ' + ACH.length;
+    $('profNote').hidden = listState === 'ready' || trips.length > 0;
+    if (listState === 'loading') { $('profNote').hidden = false; $('profNote').textContent = 'Fahrten werden geladen …'; }
+    else { $('profNote').textContent = 'Die Zahlen stammen aus deinen abgeschlossenen Fahrten.'; $('profNote').hidden = trips.length > 0; }
+  }
+  function openProfile() {
+    profReturn = document.activeElement;
+    renderProfile();
+    renderColors();
+    profModal.hidden = false;
+    $('profClose').focus({ preventScroll: true });
+    profModal.firstElementChild.scrollTop = 0;
+  }
+  function closeProfile() {
+    profModal.hidden = true;
+    if (profReturn && profReturn.focus) { try { profReturn.focus(); } catch (e) { /* ignore */ } }
+  }
+  $('whoBtn').addEventListener('click', openProfile);
+  $('profClose').addEventListener('click', closeProfile);
+  $('profHome').addEventListener('click', function () { profReturn = null; closeProfile(); showView('menu'); });
+  $('profEdit').addEventListener('click', function () { profModal.hidden = true; nameFromProfile = true; openName(); });
+  profModal.addEventListener('click', function (e) { if (e.target === profModal) closeProfile(); });
+  profModal.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.preventDefault(); closeProfile(); } });
+  $('nameForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var n = nameInput.value.replace(/\s+/g, ' ').trim();
+    if (!n) { nameInput.focus(); return; }
+    saveName(n.slice(0, 20));
+    closeName();
+  });
+  $('nameSkip').addEventListener('click', function () {
+    if (!nameAsked) saveName('');
+    closeName();
+  });
+  nameModal.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); $('nameSkip').click(); }
+  });
+
+  // ---------- Start ----------
+  loadName();
+  renderName();
+  loadColors();
+  var saved = loadSaved();
+  setInputs(saved || DEFAULTS);
+  document.body.setAttribute('data-view', 'calc');
+  applyPay();
+  live();
+  showView('menu'); // Die App startet im Hauptmenü
+  function adoptName(n) {
+    userName = n; nameAsked = true;
+    try { localStorage.setItem(NKEY, JSON.stringify({ name: n })); } catch (e) { /* ignore */ }
+    renderName();
+    if (!nameModal.hidden && !nameFromProfile) closeName();
+  }
+  var nameSynced = storeReady.then(function (st) {
+    return st.getProfile().then(function (d) {
+      var changed = false;
+      if (d && typeof d.name === 'string' && d.name && d.name !== userName) adoptName(d.name);
+      var dc = validColors(d && d.colors);
+      if (d && d.colors && dc) {
+        if (JSON.stringify(dc) !== JSON.stringify(colors)) {
+          colors = dc;
+          try { localStorage.setItem(CKEY, JSON.stringify(colors)); } catch (e) { /* ignore */ }
+          applyTheme();
+        }
+      }
+      var differs = !d || (userName && d.name !== userName) || JSON.stringify(validColors(d.colors) || {}) !== JSON.stringify(colors);
+      if (differs && (userName || JSON.stringify(colors) !== JSON.stringify(DEFAULT_COLORS))) return syncProfile();
+    });
+  }).catch(function () { /* ohne Abgleich weiter */ });
+  if (!nameAsked) {
+    Promise.race([nameSynced, new Promise(function (r) { setTimeout(r, 2500); })]).then(function () {
+      if (!nameAsked) openName();
+    });
+  }
+})();
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* App läuft auch ohne Offline-Speicher */ });
+  });
+}
+</script>
+</body>
+</html>
